@@ -16,13 +16,18 @@ export default function RealtimeNotifications({
   useEffect(() => {
     if (!profileId) return;
 
-    // Fetch conversations if none passed
-    if (initialConversations.length === 0) {
+    // We trust initialConversations from server-side.
+    // Only attempt client-side fetch if for some reason it's strictly undefined.
+    if (initialConversations === undefined) {
       supabase
         .from("conversations")
         .select("id")
         .or(`member_one_id.eq.${profileId},member_two_id.eq.${profileId}`)
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[CONVERSATION_FETCH_ERROR]", error);
+            return;
+          }
           if (data) setConversations(data);
         });
     }
@@ -39,26 +44,32 @@ export default function RealtimeNotifications({
           filter: `receiver_id=eq.${profileId}`,
         },
         async (payload) => {
-          const { data: sender } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", payload.new.sender_id)
-            .single();
+          try {
+            const { data: sender } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", payload.new.sender_id)
+              .single();
 
-          if (sender) {
-            toast.success(
-              `New friend request from ${sender.display_name || sender.username}`,
-            );
-          } else {
-            toast.success("New friend request received");
+            if (sender) {
+              toast.success(
+                `New friend request from ${sender.display_name || sender.username}`,
+              );
+            }
+          } catch (e) {
+            console.error("[FRIEND_REQ_FETCH_ERROR]", e);
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error(
+            "[WS_ERROR] Friend Req channel failed. Check network/VPN.",
+          );
+        }
+      });
 
     // Listen to new conversations where user is a participant
-    // Since we cannot use an OR filter in realtime yet, we listen to all inserts and check locally.
-    // If RLS applies to Realtime in this app, this is safe and efficient.
     const newConvChannel = supabase
       .channel("new_conversations")
       .on(
@@ -86,7 +97,7 @@ export default function RealtimeNotifications({
       supabase.removeChannel(friendReqChannel);
       supabase.removeChannel(newConvChannel);
     };
-  }, [profileId, supabase]);
+  }, [profileId, supabase, initialConversations]);
 
   useEffect(() => {
     if (!profileId || conversations.length === 0) return;
@@ -108,30 +119,37 @@ export default function RealtimeNotifications({
         },
         async (payload) => {
           const message = payload.new;
-
           if (message.profile_id === profileId) return;
-
-          if (pathname.includes(`/channels/@me/${message.conversation_id}`)) {
+          if (pathname.includes(`/channels/@me/${message.conversation_id}`))
             return;
-          }
 
-          const { data: sender } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", message.profile_id)
-            .single();
+          try {
+            const { data: sender } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", message.profile_id)
+              .single();
 
-          if (sender) {
-            toast(
-              `New message from ${sender.display_name || sender.username}`,
-              {
-                description: message.content || "Sent an attachment",
-              },
-            );
+            if (sender) {
+              toast(
+                `New message from ${sender.display_name || sender.username}`,
+                {
+                  description: message.content || "Sent an attachment",
+                },
+              );
+            }
+          } catch (e) {
+            console.error("[DM_NOTIF_ERROR]", e);
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error(
+            "[WS_ERROR] DM Notifications failed. Check network/VPN.",
+          );
+        }
+      });
 
     return () => {
       supabase.removeChannel(dmChannel);
