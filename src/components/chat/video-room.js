@@ -44,10 +44,10 @@ export default function VideoRoom({ chatId, video, audio }) {
       token={token}
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
-      className="flex flex-1"
+      className="flex flex-1 flex-col min-h-0"
       style={{
         "--lk-bg": "var(--background)",
-        "--lk-control-bg": "var(--surface)",
+        "--lk-control-bg": "var(--border)",
       }}
     >
       <VideoConference />
