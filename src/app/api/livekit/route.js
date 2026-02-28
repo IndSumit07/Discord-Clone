@@ -22,9 +22,10 @@ export async function GET(req) {
     return new Response("Server not configured properly", { status: 500 });
   }
 
-  // Generate LiveKit token
+  // Generate LiveKit token with a unique identity for multiple devices
   const at = new AccessToken(apiKey, apiSecret, {
-    identity: username,
+    identity: `${userId}-${crypto.randomUUID()}`,
+    name: username,
     ttl: "10m",
   });
 
