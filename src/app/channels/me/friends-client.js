@@ -153,14 +153,14 @@ export default function FriendsClient({
     >
       {/* Top Bar */}
       <div
-        className="flex h-12 shrink-0 items-center gap-2 px-4 border-b"
+        className="flex flex-col md:flex-row h-auto md:h-12 shrink-0 items-start md:items-center gap-2 p-3 md:px-4 border-b"
         style={{
           borderColor: "var(--border)",
           boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
         }}
       >
         <div
-          className="flex items-center gap-2 pr-4 border-r"
+          className="flex items-center gap-2 pr-4 border-b md:border-b-0 md:border-r w-full md:w-auto pb-2 md:pb-0"
           style={{ borderColor: "var(--border)" }}
         >
           <MobileToggle />
@@ -169,43 +169,45 @@ export default function FriendsClient({
             style={{ color: "var(--text-secondary)" }}
           />
           <span
-            className="font-semibold text-sm"
+            className="font-semibold text-base md:text-sm"
             style={{ color: "var(--text-primary)" }}
           >
             Friends
           </span>
         </div>
 
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className="px-3 py-1 rounded text-sm font-medium transition-colors"
-            style={{
-              background:
-                activeTab === tab.id ? "var(--surface)" : "transparent",
-              color: tab.isAction
-                ? activeTab === "add"
-                  ? "white"
-                  : "var(--success)"
-                : activeTab === tab.id
-                  ? "var(--text-primary)"
-                  : "var(--text-muted)",
-              ...(tab.isAction &&
-                activeTab === "add" && { background: "var(--success)" }),
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== tab.id && !tab.isAction)
-                e.currentTarget.style.background = "var(--surface-hover)";
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== tab.id && !tab.isAction)
-                e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-3 py-1 rounded text-sm font-medium transition-colors"
+              style={{
+                background:
+                  activeTab === tab.id ? "var(--surface)" : "transparent",
+                color: tab.isAction
+                  ? activeTab === "add"
+                    ? "white"
+                    : "var(--success)"
+                  : activeTab === tab.id
+                    ? "var(--text-primary)"
+                    : "var(--text-muted)",
+                ...(tab.isAction &&
+                  activeTab === "add" && { background: "var(--success)" }),
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== tab.id && !tab.isAction)
+                  e.currentTarget.style.background = "var(--surface-hover)";
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== tab.id && !tab.isAction)
+                  e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -228,22 +230,22 @@ export default function FriendsClient({
           </p>
           <div className="flex flex-col gap-2">
             <div
-              className={`flex items-center gap-3 rounded-lg p-1 pr-2 border ${addStatus.type === "success" ? "border-[var(--success)]" : addStatus.type === "error" ? "border-[var(--danger)]" : "border-[var(--border)]"}`}
+              className={`flex flex-col md:flex-row md:items-center gap-2 md:gap-3 rounded-lg p-3 md:p-1 md:pr-2 border ${addStatus.type === "success" ? "border-[var(--success)]" : addStatus.type === "error" ? "border-[var(--danger)]" : "border-[var(--border)]"}`}
               style={{ background: "var(--input-bg)" }}
             >
               <input
                 type="text"
-                placeholder="You can add friends with their email address."
+                placeholder="Enter an email to add"
                 value={addFriendInput}
                 onChange={(e) => setAddFriendInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                className="flex-1 bg-transparent px-3 py-2 text-sm outline-none w-full"
                 style={{ color: "var(--text-primary)" }}
               />
               <button
                 onClick={handleAdd}
                 disabled={!addFriendInput}
-                className="px-4 py-1.5 rounded text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 md:py-1.5 rounded text-sm font-semibold text-white transition-colors disabled:opacity-50 whitespace-nowrap"
                 style={{ background: "var(--primary)" }}
               >
                 Send Friend Request
@@ -431,9 +433,9 @@ export default function FriendsClient({
               activeTab === "blocked") && <EmptyState tab={activeTab} />}
           </div>
 
-          {/* Active Now Sidebar */}
+          {/* Active Now Sidebar - Hidden on mobile */}
           <div
-            className="w-80 shrink-0 border-l flex flex-col p-4"
+            className="w-80 shrink-0 border-l hidden lg:flex flex-col p-4"
             style={{ borderColor: "var(--border)" }}
           >
             <h3
