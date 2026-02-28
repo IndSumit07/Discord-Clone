@@ -6,6 +6,7 @@ import ServerSidebar from "@/components/layout/server-sidebar";
 import DMSidebar from "@/components/layout/dm-sidebar";
 import ModalProvider from "@/components/modals/modal-provider";
 import SidebarWrapper from "@/components/layout/sidebar-wrapper";
+import RealtimeNotifications from "@/components/providers/realtime-notifications";
 
 export default async function ChannelsLayout({ children }) {
   const { userId } = await auth();
@@ -59,6 +60,10 @@ export default async function ChannelsLayout({ children }) {
       </SidebarWrapper>
       <main className="flex-1 flex flex-col overflow-hidden">{children}</main>
       <ModalProvider />
+      <RealtimeNotifications
+        profileId={profile?.id}
+        initialConversations={conversations}
+      />
     </div>
   );
 }

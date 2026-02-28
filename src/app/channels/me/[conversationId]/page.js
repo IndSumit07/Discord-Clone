@@ -20,7 +20,7 @@ export default async function DMPage({ params }) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id")
+    .select("*")
     .eq("clerk_id", userId)
     .single();
 
@@ -117,7 +117,7 @@ export default async function DMPage({ params }) {
 
       <ChatMessages
         conversationId={conversationId}
-        currentProfileId={profile?.id}
+        currentProfile={profile}
         initialMessages={messages ?? []}
       />
     </div>

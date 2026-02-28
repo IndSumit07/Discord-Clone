@@ -1,6 +1,9 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
+import PageLoader from "@/components/providers/page-loader";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,7 +17,11 @@ export default function RootLayout({ children }) {
     <ClerkProvider>
       <html lang="en" className="h-full">
         <body className={`${inter.className} h-full overflow-hidden`}>
+          <Suspense fallback={null}>
+            <PageLoader />
+          </Suspense>
           {children}
+          <Toaster position="bottom-right" theme="dark" richColors />
         </body>
       </html>
     </ClerkProvider>

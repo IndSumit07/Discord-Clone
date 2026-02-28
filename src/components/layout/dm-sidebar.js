@@ -14,6 +14,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
+import { useMediaStore } from "@/store/media-store";
 
 function TooltipWrapper({ children, content, side = "top" }) {
   return (
@@ -41,6 +42,7 @@ export default function DMSidebar({ conversations = [] }) {
   const { user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const { isMuted, isDeafened, toggleMute, toggleDeafen } = useMediaStore();
 
   const isFriendsActive =
     pathname === "/channels/@me" || pathname === "/channels/me";
@@ -222,13 +224,21 @@ export default function DMSidebar({ conversations = [] }) {
           className="flex items-center shrink-0"
           style={{ color: "var(--text-secondary)" }}
         >
-          <TooltipWrapper content="Mute">
-            <button className="w-8 h-8 rounded flex items-center justify-center transition-colors hover:bg-[var(--surface-hover)]">
+          <TooltipWrapper content={isMuted ? "Unmute" : "Mute"}>
+            <button
+              onClick={toggleMute}
+              className="w-8 h-8 rounded flex items-center justify-center transition-colors hover:bg-[var(--surface-hover)]"
+              style={{ color: isMuted ? "var(--danger)" : "inherit" }}
+            >
               <Mic className="w-5 h-5" />
             </button>
           </TooltipWrapper>
-          <TooltipWrapper content="Deafen">
-            <button className="w-8 h-8 rounded flex items-center justify-center transition-colors hover:bg-[var(--surface-hover)]">
+          <TooltipWrapper content={isDeafened ? "Undeafen" : "Deafen"}>
+            <button
+              onClick={toggleDeafen}
+              className="w-8 h-8 rounded flex items-center justify-center transition-colors hover:bg-[var(--surface-hover)]"
+              style={{ color: isDeafened ? "var(--danger)" : "inherit" }}
+            >
               <Headphones className="w-5 h-5" />
             </button>
           </TooltipWrapper>

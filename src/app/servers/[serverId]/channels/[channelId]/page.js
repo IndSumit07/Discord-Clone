@@ -22,7 +22,7 @@ export default async function ChannelPage({ params }) {
   // Get current profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id")
+    .select("*")
     .eq("clerk_id", userId)
     .single();
 
@@ -121,7 +121,7 @@ export default async function ChannelPage({ params }) {
       {channel?.type === "text" && (
         <ChatMessages
           channelId={channelId}
-          currentProfileId={profile?.id}
+          currentProfile={profile}
           initialMessages={messages ?? []}
         />
       )}

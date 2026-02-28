@@ -6,6 +6,7 @@ import ChannelSidebar from "@/components/layout/channel-sidebar";
 import ModalProvider from "@/components/modals/modal-provider";
 import { syncUser } from "@/actions/syncUser";
 import SidebarWrapper from "@/components/layout/sidebar-wrapper";
+import RealtimeNotifications from "@/components/providers/realtime-notifications";
 
 export default async function ServerLayout({ children, params }) {
   const { userId } = await auth();
@@ -58,6 +59,7 @@ export default async function ServerLayout({ children, params }) {
         {children}
       </main>
       <ModalProvider />
+      <RealtimeNotifications profileId={profile?.id} />
     </div>
   );
 }

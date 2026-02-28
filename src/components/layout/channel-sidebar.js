@@ -7,6 +7,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { Mic, Headphones, Settings, UserPlus } from "lucide-react";
 import { useModalStore } from "@/store/modal-store";
 import { cn } from "@/lib/utils";
+import { useMediaStore } from "@/store/media-store";
 
 function ChannelItem({ channel, serverId, isActive }) {
   const icons = { text: "#", voice: "🔊", video: "📹", announcement: "📢" };
@@ -74,6 +75,7 @@ export default function ChannelSidebar({
   const pathname = usePathname();
   const { user } = useUser();
   const { onOpen } = useModalStore();
+  const { isMuted, isDeafened, toggleMute, toggleDeafen } = useMediaStore();
 
   const textChannels = channels.filter((c) => c.type === "text");
   const voiceChannels = channels.filter((c) => c.type === "voice");
@@ -206,26 +208,29 @@ export default function ChannelSidebar({
         </div>
         <div className="flex items-center gap-0.5">
           <button
+            onClick={toggleMute}
             className="p-1.5 rounded transition-colors hover:bg-[var(--surface-hover)]"
-            title="Mute"
+            title={isMuted ? "Unmute" : "Mute"}
+            style={{
+              color: isMuted ? "var(--danger)" : "var(--text-secondary)",
+            }}
           >
-            <Mic
-              className="w-4 h-4"
-              style={{ color: "var(--text-secondary)" }}
-            />
+            <Mic className="w-4 h-4" />
           </button>
           <button
+            onClick={toggleDeafen}
             className="p-1.5 rounded transition-colors hover:bg-[var(--surface-hover)]"
-            title="Deafen"
+            title={isDeafened ? "Undeafen" : "Deafen"}
+            style={{
+              color: isDeafened ? "var(--danger)" : "var(--text-secondary)",
+            }}
           >
-            <Headphones
-              className="w-4 h-4"
-              style={{ color: "var(--text-secondary)" }}
-            />
+            <Headphones className="w-4 h-4" />
           </button>
           <button
             className="p-1.5 rounded transition-colors hover:bg-[var(--surface-hover)]"
             title="Settings"
+            style={{ color: "var(--text-secondary)" }}
           >
             <Settings
               className="w-4 h-4"

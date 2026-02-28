@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { formatDate, formatMessageTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import {
   Hash,
   Smile,
@@ -12,23 +12,61 @@ import {
   Edit2,
   Trash2,
   FileIcon,
+  Loader2,
 } from "lucide-react";
 import { useModalStore } from "@/store/modal-store";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
-function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
+function MessageSkeleton() {
+  return (
+    <div className="flex items-start gap-4 px-4 py-2">
+      <Skeleton
+        circle
+        width={40}
+        height={40}
+        baseColor="#2b2d31"
+        highlightColor="#313338"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <Skeleton
+            width={100}
+            height={14}
+            baseColor="#2b2d31"
+            highlightColor="#313338"
+          />
+          <Skeleton
+            width={60}
+            height={10}
+            baseColor="#2b2d31"
+            highlightColor="#313338"
+          />
+        </div>
+        <Skeleton
+          width="80%"
+          height={16}
+          baseColor="#2b2d31"
+          highlightColor="#313338"
+        />
+      </div>
+    </div>
+  );
+}
+
+function MessageItem({ message, currentProfile, onEdit, onDelete }) {
   const [hovering, setHovering] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || "");
   const [loading, setLoading] = useState(false);
 
-  const isOwn = message.profile_id === currentProfileId;
+  const isOwn = message.profile_id === currentProfile?.id;
+  const isOptimistic = message.id.toString().startsWith("temp-");
 
-  // Sync edit content when message changes externally
   useEffect(() => {
     setEditContent(message.content || "");
   }, [message.content]);
 
-  // Handle ESC globally when editing
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape" && isEditing) {
@@ -49,7 +87,6 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
 
     setLoading(true);
     const newContent = editContent.trim();
-    // Optimistic update
     onEdit(message.id, newContent);
     setIsEditing(false);
 
@@ -61,7 +98,6 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
       });
     } catch (err) {
       console.error(err);
-      // Revert on error
       onEdit(message.id, message.content);
     } finally {
       setLoading(false);
@@ -69,7 +105,6 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
   }
 
   async function handleDelete() {
-    // Optimistic delete
     onDelete(message.id);
     try {
       await fetch(`/api/messages/${message.id}`, {
@@ -82,12 +117,13 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
 
   return (
     <div
-      className="group relative flex items-start gap-4 px-4 py-1 hover:bg-white/5 transition-colors rounded"
+      className={`group relative flex items-start gap-4 px-4 py-[2px] transition-colors rounded ${
+        isOptimistic ? "opacity-50" : "hover:bg-white/5"
+      }`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
-      {/* Avatar */}
-      <div className="mt-0.5 shrink-0">
+      <div className="mt-1 shrink-0">
         {message.profile?.avatar_url ? (
           <img
             src={message.profile.avatar_url}
@@ -104,45 +140,47 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
           <span
-            className="font-semibold text-sm"
+            className="font-semibold text-sm hover:underline cursor-pointer"
             style={{ color: "var(--text-primary)" }}
           >
             {message.profile?.display_name ??
               message.profile?.username ??
               "Unknown"}
           </span>
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
             {formatDate(message.created_at)}
           </span>
-          {message.is_edited && (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {message.is_edited && !message.deleted_at && (
+            <span
+              className="text-[10px]"
+              style={{ color: "var(--text-muted)" }}
+            >
               (edited)
             </span>
+          )}
+          {isOptimistic && (
+            <Loader2
+              className="w-3 h-3 animate-spin"
+              style={{ color: "var(--text-muted)" }}
+            />
           )}
         </div>
 
         {isEditing ? (
-          <div className="flex flex-col gap-2 w-full mt-1">
+          <div className="flex flex-col gap-1 w-full mt-1">
             <form onSubmit={handleEdit} className="flex-1">
               <input
                 autoFocus
                 disabled={loading}
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full text-sm rounded px-3 py-2 outline-none"
+                className="w-full text-sm rounded-md px-3 py-2 outline-none border-none"
                 style={{
                   background: "var(--input-bg)",
                   color: "var(--text-primary)",
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setIsEditing(false);
-                    setEditContent(message.content);
-                  }
                 }}
               />
             </form>
@@ -151,22 +189,19 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
               style={{ color: "var(--text-muted)" }}
             >
               escape to{" "}
-              <span
-                className="text-blue-400 cursor-pointer hover:underline"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditContent(message.content);
-                }}
+              <button
+                onClick={() => setIsEditing(false)}
+                className="text-[#00a8fc] hover:underline"
               >
                 cancel
-              </span>{" "}
+              </button>{" "}
               • enter to{" "}
-              <span
-                className="text-blue-400 cursor-pointer hover:underline"
+              <button
                 onClick={handleEdit}
+                className="text-[#00a8fc] hover:underline"
               >
                 save
-              </span>
+              </button>
             </span>
           </div>
         ) : message.deleted_at ? (
@@ -177,7 +212,7 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
           <>
             {message.content && (
               <p
-                className="text-sm break-words whitespace-pre-wrap mb-1"
+                className="text-sm break-words whitespace-pre-wrap leading-5"
                 style={{ color: "var(--text-primary)" }}
               >
                 {message.content}
@@ -195,7 +230,7 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
                   <img
                     src={message.file_url}
                     alt="attachment"
-                    className="w-full h-auto object-cover max-h-72"
+                    className="w-full h-auto object-cover max-h-[350px]"
                   />
                 ) : (
                   <a
@@ -204,8 +239,8 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 hover:bg-[var(--surface-hover)] transition-colors"
                   >
-                    <FileIcon className="w-8 h-8 text-indigo-400 shrink-0" />
-                    <span className="text-sm font-medium truncate text-blue-400 hover:underline">
+                    <FileIcon className="w-8 h-8 text-[#00a8fc] shrink-0" />
+                    <span className="text-sm font-medium truncate text-[#00a8fc] hover:underline">
                       Download Attachment
                     </span>
                   </a>
@@ -216,44 +251,31 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
         )}
       </div>
 
-      {/* Hover Actions */}
-      {hovering && !message.deleted_at && !isEditing && (
+      {hovering && !message.deleted_at && !isEditing && !isOptimistic && (
         <div
-          className="absolute right-4 top-0 -translate-y-1/2 flex items-center gap-1 rounded px-2 py-1 shadow-lg border"
-          style={{
-            background: "var(--sidebar-bg)",
-            borderColor: "var(--border)",
-          }}
+          className="absolute -right-1 top-0 -translate-y-1/2 flex items-center gap-1 rounded px-1.5 py-0.5 shadow-lg border bg-[#2b2d31]"
+          style={{ borderColor: "var(--border)" }}
         >
-          <button
-            className="p-1.5 rounded hover:bg-[var(--surface)] transition-colors"
-            title="React"
-          >
-            <Smile
-              className="w-4 h-4"
-              style={{ color: "var(--text-secondary)" }}
-            />
+          <button className="p-1.5 rounded hover:bg-[#3f4147] transition-colors">
+            <Smile className="w-4 h-4 text-[#b5bac1]" />
           </button>
           {isOwn && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-1.5 rounded hover:bg-[var(--surface)] transition-colors"
-              title="Edit"
-            >
-              <Edit2
-                className="w-4 h-4"
-                style={{ color: "var(--text-secondary)" }}
-              />
-            </button>
-          )}
-          {isOwn && (
-            <button
-              onClick={handleDelete}
-              className="p-1.5 rounded hover:bg-[var(--surface)] transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" style={{ color: "var(--danger)" }} />
-            </button>
+            <>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1.5 rounded hover:bg-[#3f4147] transition-colors"
+                title="Edit"
+              >
+                <Edit2 className="w-4 h-4 text-[#b5bac1]" />
+              </button>
+              <button
+                onClick={handleDelete}
+                className="p-1.5 rounded hover:bg-[#3f4147] transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4 text-[#f23f42]" />
+              </button>
+            </>
           )}
         </div>
       )}
@@ -263,15 +285,15 @@ function MessageItem({ message, currentProfileId, onEdit, onDelete }) {
 
 function DateDivider({ date }) {
   return (
-    <div className="flex items-center gap-4 px-4 py-2 mt-4">
-      <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+    <div className="flex items-center gap-4 px-4 py-2 mt-4 relative">
+      <div className="flex-1 h-px bg-[#3f4147]" />
       <span
-        className="text-xs font-semibold px-2"
-        style={{ color: "var(--text-muted)" }}
+        className="text-[11px] font-bold px-1 relative z-10"
+        style={{ color: "#949ba4" }}
       >
         {date}
       </span>
-      <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+      <div className="flex-1 h-px bg-[#3f4147]" />
     </div>
   );
 }
@@ -279,14 +301,16 @@ function DateDivider({ date }) {
 export default function ChatMessages({
   channelId,
   conversationId,
-  currentProfileId,
+  currentProfile,
   initialMessages = [],
 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(initialMessages.length === 0);
+
   const bottomRef = useRef(null);
-  const supabase = getSupabaseClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
   const { onOpen } = useModalStore();
 
   const isDM = !!conversationId;
@@ -294,13 +318,16 @@ export default function ChatMessages({
   const filterCol = isDM ? "conversation_id" : "channel_id";
   const filterVal = isDM ? conversationId : channelId;
 
-  // Auto-scroll
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const scrollToBottom = useCallback((smooth = true) => {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  }, []);
 
   useEffect(() => {
-    const channel = supabase
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    const chatChannel = supabase
       .channel(`chat-${filterVal}`)
       .on(
         "postgres_changes",
@@ -311,13 +338,36 @@ export default function ChatMessages({
           filter: `${filterCol}=eq.${filterVal}`,
         },
         async (payload) => {
-          // Fetch the full message with profile
+          // If the message is from me, it might already be here optimistically
+          // We'll replace the optimistic one with the real one
           const { data } = await supabase
             .from(table)
             .select("*, profile:profiles(*)")
             .eq("id", payload.new.id)
             .single();
-          if (data) setMessages((prev) => [...prev, data]);
+
+          if (data) {
+            setMessages((prev) => {
+              // Check if we have an optimistic message matching this
+              // Note: Matching by content/profile is a bit loose, but usually fine for Discord-like feel
+              const isMine = data.profile_id === currentProfile?.id;
+              if (isMine) {
+                const optimisticIdx = prev.findIndex(
+                  (m) =>
+                    m.id.toString().startsWith("temp-") &&
+                    m.content === data.content,
+                );
+                if (optimisticIdx !== -1) {
+                  const next = [...prev];
+                  next[optimisticIdx] = data;
+                  return next;
+                }
+              }
+              // Deduplicate ID just in case
+              if (prev.some((m) => m.id === data.id)) return prev;
+              return [...prev, data];
+            });
+          }
         },
       )
       .on(
@@ -339,16 +389,30 @@ export default function ChatMessages({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(chatChannel);
     };
-  }, [filterVal, table, filterCol]);
+  }, [filterVal, table, filterCol, currentProfile?.id, supabase]);
 
   const sendMessage = useCallback(
     async (e) => {
       e?.preventDefault();
-      if (!input.trim() || sending) return;
-      setSending(true);
       const content = input.trim();
+      if (!content) return;
+
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage = {
+        id: tempId,
+        content,
+        profile_id: currentProfile?.id,
+        profile: currentProfile,
+        created_at: new Date().toISOString(),
+        is_edited: false,
+        deleted_at: null,
+        file_url: null,
+      };
+
+      // Push optimistic
+      setMessages((prev) => [...prev, optimisticMessage]);
       setInput("");
 
       try {
@@ -361,11 +425,11 @@ export default function ChatMessages({
         });
       } catch (err) {
         console.error(err);
-      } finally {
-        setSending(false);
+        // Remove optimistic on absolute failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
       }
     },
-    [input, channelId, conversationId, sending, isDM],
+    [input, channelId, conversationId, isDM, currentProfile],
   );
 
   const handleEditMessage = useCallback((id, newContent) => {
@@ -386,117 +450,86 @@ export default function ChatMessages({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto flex flex-col justify-end">
-        <div className="min-h-0">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                style={{ background: "var(--surface)" }}
-              >
-                <Hash
-                  className="w-10 h-10"
-                  style={{ color: "var(--text-muted)" }}
-                />
+      <div className="flex-1 overflow-y-auto flex flex-col scrollbar-custom">
+        <div className="mt-auto">
+          {messages.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-[#2b2d31]">
+                <Hash className="w-10 h-10 text-[#b5bac1]" />
               </div>
-              <h3
-                className="text-2xl font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Welcome to the channel!
+              <h3 className="text-3xl font-bold mb-2 text-white">
+                Welcome to #
+                {conversationId
+                  ? currentProfile?.username
+                  : initialMessages[0]?.channel?.name || "channel"}
+                !
               </h3>
-              <p style={{ color: "var(--text-muted)" }}>
-                This is the beginning of the channel history.
+              <p className="text-[#b5bac1]">
+                This is the beginning of the history between you and this
+                channel.
               </p>
             </div>
           )}
 
-          {messages.map((message, i) => {
-            const prev = messages[i - 1];
-            const currDate = formatDate(message.created_at);
-            const prevDate = prev ? formatDate(prev.created_at) : null;
-            const showDivider = currDate !== prevDate;
+          {loading
+            ? Array(5)
+                .fill(0)
+                .map((_, i) => <MessageSkeleton key={i} />)
+            : messages.map((message, i) => {
+                const prev = messages[i - 1];
+                const currDate = formatDate(message.created_at);
+                const prevDate = prev ? formatDate(prev.created_at) : null;
+                const showDivider = currDate !== prevDate;
 
-            return (
-              <div key={message.id}>
-                {showDivider && <DateDivider date={currDate} />}
-                <MessageItem
-                  message={message}
-                  currentProfileId={currentProfileId}
-                  onEdit={handleEditMessage}
-                  onDelete={handleDeleteMessage}
-                />
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
+                return (
+                  <div key={message.id}>
+                    {showDivider && <DateDivider date={currDate} />}
+                    <MessageItem
+                      message={message}
+                      currentProfile={currentProfile}
+                      onEdit={handleEditMessage}
+                      onDelete={handleDeleteMessage}
+                    />
+                  </div>
+                );
+              })}
+          <div ref={bottomRef} className="h-4" />
         </div>
       </div>
 
-      {/* Message Input */}
       <div className="px-4 pb-6 pt-2 shrink-0">
         <form onSubmit={sendMessage}>
-          <div
-            className="flex items-center gap-2 rounded-lg pl-4"
-            style={{ background: "var(--surface)" }}
-          >
-            {/* Attachment */}
+          <div className="flex items-center gap-2 rounded-lg pl-4 bg-[#383a40]">
             <button
               type="button"
               onClick={() =>
                 onOpen("messageFile", { channelId, conversationId })
               }
-              className="p-2 shrink-0 rounded transition-colors hover:bg-[var(--surface-hover)]"
+              className="p-2 shrink-0 rounded-full transition-colors hover:bg-[#404249]"
             >
-              <Plus
-                className="w-5 h-5"
-                style={{ color: "var(--text-secondary)" }}
-              />
+              <Plus className="w-5 h-5 text-[#b5bac1]" />
             </button>
 
-            {/* Input */}
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) sendMessage(e);
               }}
-              placeholder="Message #channel"
-              className="flex-1 bg-transparent py-3 text-sm outline-none"
-              style={{ color: "var(--text-primary)" }}
-              disabled={sending}
+              placeholder={`Message ${isDM ? "@me" : "#channel"}`}
+              className="flex-1 bg-transparent py-3 text-sm outline-none text-[#dbdee1]"
             />
 
-            {/* Action buttons */}
             <div className="flex items-center pr-2 gap-1">
-              <button
-                type="button"
-                className="p-2 rounded transition-colors hover:bg-[var(--surface-hover)]"
-              >
-                <Gift
-                  className="w-5 h-5"
-                  style={{ color: "var(--text-secondary)" }}
-                />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded transition-colors hover:bg-[var(--surface-hover)]"
-              >
-                <Sticker
-                  className="w-5 h-5"
-                  style={{ color: "var(--text-secondary)" }}
-                />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded transition-colors hover:bg-[var(--surface-hover)]"
-              >
-                <Smile
-                  className="w-5 h-5"
-                  style={{ color: "var(--text-secondary)" }}
-                />
-              </button>
+              {[Gift, Sticker, Smile].map((Icon, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="p-2 rounded transition-colors hover:bg-[#404249]"
+                >
+                  <Icon className="w-5 h-5 text-[#b5bac1]" />
+                </button>
+              ))}
             </div>
           </div>
         </form>
