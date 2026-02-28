@@ -8,6 +8,7 @@ import { Mic, Headphones, Settings, UserPlus } from "lucide-react";
 import { useModalStore } from "@/store/modal-store";
 import { cn } from "@/lib/utils";
 import { useMediaStore } from "@/store/media-store";
+import ServerHeader from "./server-header";
 
 function ChannelItem({ channel, serverId, isActive }) {
   const icons = { text: "#", voice: "🔊", video: "📹", announcement: "📢" };
@@ -47,14 +48,8 @@ function ChannelItem({ channel, serverId, isActive }) {
       <div
         className="opacity-0 group-hover:opacity-100 ml-auto shrink-0 transition-opacity"
         onClick={(e) => {
-          // We ONLY do this for testing, normally you'd only see a plus next to Category...
-          // But since Discord has no "plus" next to regular channels by default unless for threads,
-          // actually let's just make the entire un-categorized Plus add a channel, passing the channel's server.
-          // However wait, the Plus icon inside a channel row usually in Discord is for "Create Invite" or "Edit Channel".
-          // But the user requested "cannot modify my channels by right clicking not showing voice channels cannot create voice channels".
-          // Wait, they meant they cannot create voice channels because the Plus is broken or missing.
-          // Let's just remove the plus on the channel if they want to modify it, and let's leave it as is.
           e.preventDefault();
+          onOpen("editChannel", { server, channel });
         }}
       >
         <Settings
@@ -142,40 +137,7 @@ export default function ChannelSidebar({
       style={{ background: "var(--channel-sidebar)" }}
     >
       {/* Server Header */}
-      <div
-        className="flex h-12 shrink-0 items-center justify-between px-4 shadow-sm transition-colors hover:bg-[var(--surface-hover)]"
-        style={{
-          boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-        }}
-      >
-        <button
-          className="flex flex-1 items-center font-semibold text-left"
-          style={{ color: "var(--text-primary)" }}
-          onClick={() => onOpen("serverSettings", { server })}
-        >
-          <span className="truncate">{server?.name ?? "Server"}</span>
-          <svg
-            className="w-4 h-4 shrink-0 ml-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
-        <button
-          onClick={() => onOpen("invite", { server })}
-          className="ml-2 p-1 rounded hover:bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          title="Invite People"
-        >
-          <UserPlus className="w-5 h-5" />
-        </button>
-      </div>
+      <ServerHeader server={server} profile={profile} />
 
       {/* Channels Area */}
       <div className="flex-1 overflow-y-auto py-2">

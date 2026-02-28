@@ -128,7 +128,7 @@ function MessageItem({ message, currentProfile, onEdit, onDelete }) {
           <img
             src={message.profile.avatar_url}
             className="w-10 h-10 rounded-full"
-            alt={message.profile.username}
+            alt={message.profile?.username || "avatar"}
           />
         ) : (
           <div
@@ -313,6 +313,12 @@ export default function ChatMessages({
   const supabase = useMemo(() => getSupabaseClient(), []);
   const { onOpen } = useModalStore();
 
+  // Sync messages state when switching channels/conversations
+  useEffect(() => {
+    setMessages(initialMessages);
+    setLoading(false);
+  }, [initialMessages, channelId, conversationId]);
+
   const isDM = !!conversationId;
   const table = isDM ? "direct_messages" : "messages";
   const filterCol = isDM ? "conversation_id" : "channel_id";
@@ -416,13 +422,17 @@ export default function ChatMessages({
       setInput("");
 
       try {
-        await fetch(`/api/messages`, {
+        const res = await fetch(`/api/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             isDM ? { conversationId, content } : { channelId, content },
           ),
         });
+
+        if (!res.ok) {
+          throw new Error("Failed to send");
+        }
       } catch (err) {
         console.error(err);
         // Remove optimistic on absolute failure

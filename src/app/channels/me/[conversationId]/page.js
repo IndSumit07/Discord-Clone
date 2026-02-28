@@ -37,13 +37,13 @@ export default async function DMPage({ params }) {
       ? conversation.member_two
       : conversation.member_one;
 
-  const { data: messages } = await supabase
+  const { data: messagesResponse } = await supabase
     .from("direct_messages")
     .select("*, profile:profiles(*)")
     .eq("conversation_id", conversationId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(50);
+  const messages = messagesResponse?.reverse() ?? [];
 
   return (
     <div

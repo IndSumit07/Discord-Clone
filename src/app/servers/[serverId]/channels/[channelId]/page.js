@@ -40,10 +40,9 @@ export default async function ChannelPage({ params }) {
       .from("messages")
       .select("*, profile:profiles(*)")
       .eq("channel_id", channelId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(50);
-    messages = data;
+    messages = data?.reverse() ?? [];
   }
 
   return (

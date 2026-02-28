@@ -13,21 +13,24 @@ export async function POST(req, { params }) {
 
   const supabase = getSupabaseAdmin();
 
-  // Verify membership and permissions
+  // Verify membership
   const { data: profile } = await supabase
     .from("profiles")
     .select("id")
     .eq("clerk_id", userId)
     .single();
 
-  const { data: server } = await supabase
-    .from("servers")
-    .select("owner_id")
-    .eq("id", serverId)
+  if (!profile) return new Response("Profile not found", { status: 404 });
+
+  const { data: member } = await supabase
+    .from("server_members")
+    .select("id")
+    .eq("server_id", serverId)
+    .eq("profile_id", profile.id)
     .single();
 
-  if (!server || server.owner_id !== profile?.id) {
-    return new Response("Forbidden", { status: 403 });
+  if (!member) {
+    return new Response("Forbidden: Not a member", { status: 403 });
   }
 
   const { data, error } = await supabase
